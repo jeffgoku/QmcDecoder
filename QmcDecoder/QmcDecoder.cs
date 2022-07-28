@@ -1,3 +1,5 @@
+namespace QmcDecoder;
+
 public class Seed
 {
     int x = -1;
