@@ -1,6 +1,6 @@
 namespace QmcDecoder;
 
-public class Seed
+public class StaticDecoder
 {
     int x = -1;
     int y = 8;
