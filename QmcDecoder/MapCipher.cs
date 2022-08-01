@@ -17,10 +17,8 @@ namespace QmcDecoder
         byte getMask()
         {
             var offset = _offset++;
-            if (offset > 0x7FFF) {
-                offset %= 0x7FFF;
+            offset %= 0x7FFF;
 
-            }
             var idx = (offset * offset + 71214) % _key.Length;
 
             return rotate(_key[idx], (byte)(idx & 0x7));

@@ -51,10 +51,8 @@ namespace QmcDecoder
 		byte getMask()
 		{
 			var offset = _offset++;
-			if (offset > 0x7FFF)
-			{
-				offset %= 0x7FFF;
-			}
+			offset %= 0x7FFF;
+
 			var idx = (offset * offset + 27) & 0xff;
 			return staticCipherBox[idx];
 		}

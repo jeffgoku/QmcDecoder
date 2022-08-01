@@ -5,12 +5,9 @@ namespace QmcDecoder
     using static KeyUtils;
     internal class QmcDecoder2
     {
-        string fileExt;
-
         int audioLen;
         byte[] decodedKey;
-        BaseCipher cipher;
-        int offset;
+        readonly BaseCipher cipher;
 
         int rawMetaExtra1;
         int rawMetaExtra2;
@@ -54,6 +51,11 @@ namespace QmcDecoder
                 data = data[..n];
             }
             n = _inputData.Read(data);
+            if (n == 0)
+            {
+                Console.WriteLine("data exhausted prematurely");
+                return 0;
+            }
             cipher.Decrypt(data[..n]);
             return n;
         }

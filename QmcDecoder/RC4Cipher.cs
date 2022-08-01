@@ -13,11 +13,10 @@ namespace QmcDecoder
 
         public RC4Cipher(byte[] key)
         {
-            _key = new byte[key.Length];
-            _box = new byte[key.Length];
-            Array.Copy(key, _key, key.Length);
-
-            int n = _box.Length;
+            int n = key.Length;
+            _key = new byte[n];
+            _box = new byte[n << 1]; // second half used for temp box data in endASegment
+            Array.Copy(key, _key, n);
 
             for (int i = 0; i < n; ++i)
             {
@@ -25,7 +24,7 @@ namespace QmcDecoder
             }
 
             var j = 0;
-            for (int i = 0; i < _box.Length; i++)
+            for (int i = 0; i < n; i++)
             {
                 j = (j + _box[i] + key[i % n]) % n;
 
@@ -71,7 +70,7 @@ namespace QmcDecoder
                     blockSize = rc4FirstSegmentSize - _offset;
 
                 }
-                encFirstSegment(src[0..blockSize], _offset);
+                encFirstSegment(src[..blockSize], _offset);
                 _offset += blockSize;
                 toProcess -= blockSize;
                 processed += blockSize;
@@ -113,6 +112,7 @@ namespace QmcDecoder
             if (toProcess > 0)
             {
                 encASegment(src[processed..], _offset);
+                _offset += toProcess;
             }
         }
 
@@ -127,8 +127,8 @@ namespace QmcDecoder
         void encASegment(Span<byte> buf, int offset)
         {
             int n = _key.Length;
-            var box = new byte[n];
-            Array.Copy(_box, box, n);
+            Span<byte> tempBox = new (_box, n, n);
+            new Span<byte>(_box, 0, n).CopyTo(tempBox);
 
             int j = 0, k = 0;
 
@@ -138,13 +138,13 @@ namespace QmcDecoder
             {
                 j = (j + 1) % n;
 
-                k = (box[j] + k) % n;
+                k = (tempBox[j] + k) % n;
 
-                (box[j], box[k]) = (box[k], box[j]);
+                (tempBox[j], tempBox[k]) = (tempBox[k], tempBox[j]);
 
                 if (i >= 0)
                 {
-                    buf[i] ^= box[box[j] + box[k] % n];
+                    buf[i] ^= tempBox[(tempBox[j] + tempBox[k]) % n];
                 }
             }
         }
