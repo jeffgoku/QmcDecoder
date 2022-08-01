@@ -98,23 +98,20 @@ class Program
             return;
         }
 
-        byte[] buffer = new byte[20480];
+        Span<byte> buffer = new byte[20480];
         using var fs = File.Open(file, FileMode.Open);
         try
         {
             using var outfs = File.Open(outfile, FileMode.Create);
 
             var decoder = new QmcDecoder2(fs);
-            int n;
             do
             {
-                n = fs.Read(buffer, 0, buffer.Length);
+                int n = decoder.Decode(buffer);
                 if (n == 0)
                     break;
-
-                decoder.Decode(new Span<byte>(buffer, 0, n));
-                outfs.Write(buffer, 0, n);
-            } while (n == buffer.Length);
+                outfs.Write(buffer[..n]);
+            } while (true);
         }
         catch(Exception ex)
         {

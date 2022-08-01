@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace QmcDecoder
 {
@@ -27,7 +23,11 @@ namespace QmcDecoder
         {
             _inputData = stream;
             searchKey();
-            if (decodedKey.Length > 300)
+            if (decodedKey == null)
+            {
+                cipher = new NewStaticCipher();
+            }
+            else if (decodedKey.Length > 300)
             {
                 cipher = new RC4Cipher(decodedKey);
             }
@@ -37,7 +37,7 @@ namespace QmcDecoder
             }
             else
             {
-                cipher = new NewStaticCipher();
+                throw new InvalidOperationException("unknown file format");
             }
 
             _inputData.Seek(0, System.IO.SeekOrigin.Begin);
@@ -89,10 +89,13 @@ namespace QmcDecoder
         {
             audioLen = (int)_inputData.Seek(-(4 + rawKeyLen), System.IO.SeekOrigin.End);
 
-            byte[] rawKeyData = new byte[rawKeyLen - 1]; // skip the trailing 0
+            byte[] rawKeyData = new byte[rawKeyLen];
             _inputData.Read(rawKeyData);
 
-            decodedKey = DecryptKey(System.Text.Encoding.UTF8.GetString(rawKeyData));
+            //under windows the last byte of rawKeyData is 0
+            string strKey = System.Text.Encoding.UTF8.GetString(rawKeyData, 0, (int)(rawKeyData[rawKeyLen - 1] == 0 ? rawKeyLen - 1 : rawKeyLen));
+            //rawKeyData = null;
+            decodedKey = DecryptKey(strKey);
         }
 
         void readRawMetaQTag()

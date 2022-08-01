@@ -15,24 +15,49 @@ namespace QmcDecoder
 			return keyBuf;
 		}
 
-		static public byte[] DecryptKey(string rawKey)
+		static public byte[] DecryptKey(ReadOnlySpan<char> rawKey)
 		{
-			var rawKeyDec = Convert.FromBase64String(rawKey);
+			const string prefixStr = "QQMusic EncV2,Key:";
 
-			const int skipLen = 18; // the length of "QQMusic EncV2,Key:"
+			int i = rawKey.Length - 1;
+			while (rawKey[i] == 0)
+			{
+				--i;
+			}
+			int keyLen = i + 1;
+			int padding = 0;
+			while (rawKey[i] == '=')
+			{
+				--i;
+				padding++;
+			}
+
+			Span<byte> rawKeyDec = new byte[3 * (keyLen / 4) - padding];
+			if (!Convert.TryFromBase64Chars(rawKey, rawKeyDec, out keyLen))
+			{
+				throw new ArgumentException("key is not base64 encoded");
+			}
+
+			if (keyLen > prefixStr.Length)
+			{
+				Span<byte> prefixBytes = stackalloc byte[prefixStr.Length];
+				int n = System.Text.Encoding.UTF8.GetBytes(prefixStr, prefixBytes);
+				if (n == prefixBytes.Length && prefixBytes.SequenceCompareTo(rawKeyDec[..n]) == 0)
+					rawKeyDec = rawKeyDec[n..];
+			}
 
 			var simpleKey = simpleMakeKey(106, 8);
 			Span<byte> teaKey = stackalloc byte[16];
-			for (int i = 0; i < 8; i++)
+			for (i = 0; i < 8; i++)
 			{
 				teaKey[i << 1] = simpleKey[i];
-				teaKey[(i << 1) + 1] = rawKeyDec[skipLen + i];
+				teaKey[(i << 1) + 1] = rawKeyDec[i];
 			}
 
-			var rs = decryptTencentTea(new Span<byte>(rawKeyDec, skipLen + 8, rawKeyDec.Length - skipLen - 8), teaKey);
+			var rs = decryptTencentTea(rawKeyDec[8..], teaKey);
 
 			var ret = new byte[8 + rs.Length];
-			Array.Copy(rawKeyDec, skipLen, ret, 0, 8);
+			rawKeyDec[..8].CopyTo(ret);
 			Array.Copy(rs, 0, ret, 8, rs.Length);
 			return ret;
 		}
@@ -41,6 +66,7 @@ namespace QmcDecoder
 		{
 			const int saltLen = 2;
 			const int zeroLen = 7;
+
 			if (inBuf.Length % 8 != 0)
 			{
 				throw new ArgumentException("inBuf size not a multiple of the block size");
