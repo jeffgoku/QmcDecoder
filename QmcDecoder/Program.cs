@@ -25,7 +25,10 @@ class Program
             else
             {
                 if (!HaveValidExt(path))
+                {
+                    Console.WriteLine($"Do not support {path}");
                     return;
+                }
                 ProcessFile(path);
             }
         });
@@ -62,6 +65,10 @@ class Program
         {
             return true;
         }
+        else if (ext.CompareTo(".mgg", StringComparison.Ordinal) == 0)
+        {
+            return true;
+        }
         else
         {
             return false;
@@ -81,6 +88,7 @@ class Program
                 break;
             case ".qmcogg":
             case ".mogg":
+            case ".mgg":
                 outfile = string.Concat(file.AsSpan(0, file.Length - ext.Length), ".ogg");
                 break;
             case ".qmc0":
